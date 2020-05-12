@@ -195,7 +195,7 @@ class Rasterizer(object):
 
         return matrix
 
-    def render_block(self, block_name, variant=""):
+    def render_block(self, block_name, variant, props):
         image = numpy.zeros((
             self.texture_dimensions[0] * self.texture_dimensions[1],
             4
@@ -208,18 +208,18 @@ class Rasterizer(object):
         blockstates = self.load_json("assets/minecraft/blockstates/%s.json" % block_name)
         if "variants" in blockstates:
             blockstate = blockstates["variants"][variant]
-            self.render_part(blockstate, image, zbuffer)
+            self.render_part(blockstate, image, zbuffer, props)
         elif "multipart" in blockstates:
             state = dict((x.split("=") for x in variant.split(",")))
             for part in blockstates["multipart"]:
                 if all((state[k] == v for (k,v) in part.get("when", {}).items())):
-                    self.render_part(part["apply"], image, zbuffer)
+                    self.render_part(part["apply"], image, zbuffer, props)
 
         image = image.reshape((*self.texture_dimensions, 4))
         #image = (zbuffer.reshape(self.texture_dimensions) * 255).astype(numpy.uint8)
         return Image.fromarray(image)
         
-    def render_part(self, blockstate, image, zbuffer):
+    def render_part(self, blockstate, image, zbuffer, props):
         global_matrix = numpy.eye(3)
         for axis in ["x", "y", "z"]:
             if axis in blockstate:
@@ -250,6 +250,9 @@ class Rasterizer(object):
                 model_name = model["parent"]
             else:
                 break
+        
+        if model_name == "block/cube":
+            props["solid"] = True
 
         if "elements" not in model:
             raise KeyError("'%s' does not have a model" % model_name)
@@ -362,9 +365,9 @@ class Textures(object):
             self.jars[self.find_file_local_path] = pack
             self.jars.move_to_end(self.find_file_local_path, last=False)
         
-        def render_block(name, data):
+        def render_block(name, data, props):
             try:
-                return self.rasterizer.render_block(name, data)
+                return self.rasterizer.render_block(name, data, props)
             except Exception:
                 # not all block models can be rendered from JSON
                 return None
@@ -379,12 +382,20 @@ class Textures(object):
                 blockid = max_blockid
                 max_blockid += 1
 
-                img = render_block(name, data)
+                props = {}
+                img = render_block(name, data, props)
                 #print(fullname, data)
                 self.newblocks[blockid] = img
                 # TODO might want to give it fake data ids to reduce memory overhead
                 # in self.blockmap (then again, memory doesn't seem to be of concern there) 
                 blockmap.discovered_blocks[fullname][data] = (blockid, 0)
+
+                # let's guess whether this is a solid block or not (important for lighting)
+                known_blocks.update([ blockid ])
+                if props.get("solid", False):
+                    solid_blocks.update([ blockid ])
+                else:
+                    transparent_blocks.update([ blockid ])
 
         # add all unknown blocks
         blockstate_dir = "assets/minecraft/blockstates/"
