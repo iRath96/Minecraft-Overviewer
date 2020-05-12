@@ -39,9 +39,9 @@ PyObject* init_chunk_render(void) {
 
     /* this function only needs to be called once, anything more should be
      * ignored */
-    if (textures) {
-        Py_RETURN_NONE;
-    }
+    //if (textures) {
+    //    Py_RETURN_NONE;
+    //}
     textures = PyImport_ImportModule("overviewer_core.textures");
     /* ensure none of these pointers are NULL */
     if ((!textures)) {

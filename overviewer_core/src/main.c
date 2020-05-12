@@ -22,6 +22,11 @@ PyObject* get_extension_version(PyObject* self, PyObject* args) {
     return Py_BuildValue("i", OVERVIEWER_EXTENSION_VERSION);
 }
 
+PyObject*
+init_chunk_render_wrap(PyObject* self, PyObject* args) {
+    return init_chunk_render();
+}
+
 static PyMethodDef COverviewerMethods[] = {
     {"alpha_over", alpha_over_wrap, METH_VARARGS,
      "alpha over composite function"},
@@ -34,6 +39,9 @@ static PyMethodDef COverviewerMethods[] = {
 
     {"extension_version", get_extension_version, METH_VARARGS,
      "Returns the extension version"},
+
+    {"init_chunk_render", init_chunk_render_wrap, METH_VARARGS,
+     "Initializes chunk renderer"},
 
     {NULL, NULL, 0, NULL} /* Sentinel */
 };
