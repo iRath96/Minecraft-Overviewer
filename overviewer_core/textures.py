@@ -62,6 +62,9 @@ class Rasterizer(object):
         self.bgcolor = (26, 26, 26, 0)
         self.texture_dimensions = dimensions
 
+        self.light_vector  = numpy.array([ -0.8, +1.0, +0.7 ])
+        #self.light_vector /= numpy.linalg.norm(self.light_vector)
+
         self.projection = numpy.array([
             [ +1/2,    0, +1/2 ],
             [ -1/4, -1/2, +1/4 ],
@@ -113,6 +116,10 @@ class Rasterizer(object):
             numpy.matmul(self.projection, point) + shift for point in points
         ]])
 
+        normal  = numpy.cross(points[2] - points[0], points[1] - points[0])
+        normal /= numpy.linalg.norm(normal)
+        light = numpy.clip(normal.dot(self.light_vector), 0, 1)
+
         def edgefunc(v0, v1, p):
             px = p[:, 1]
             py = p[:, 0]
@@ -153,7 +160,7 @@ class Rasterizer(object):
         mask = mask & (z > zbuffer) # only foreground
         mask = mask & (tex[:,3] > 0) # only opaque pixels
         
-        image[mask] = tex[mask]
+        image[mask] = tex[mask] * light
         image[:,3][mask] = 255
         zbuffer[mask] = z[mask]
 
