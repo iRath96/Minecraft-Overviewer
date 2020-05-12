@@ -48,6 +48,20 @@ fluid_blocks = set()
 nospawn_blocks = set()
 nodata_blocks = set()
 
+# used by c_overviewer to query block ids
+def lookup_blockid(name, data=""):
+    if len(blockmap.discovered_blocks) == 0:
+        # not ready yet
+        return None
+    
+    if name in blockmap.discovered_blocks:
+        if data in blockmap.discovered_blocks[name]:
+            (blockid, dataid) = blockmap.discovered_blocks[name][data]
+            return blockid
+    
+    logging.warning("lookup_blockid failed for '%s':'%s'" % (name, data))
+    return None
+
 
 # This is here for circular import reasons.
 # Please don't ask, I choose to repress these memories.

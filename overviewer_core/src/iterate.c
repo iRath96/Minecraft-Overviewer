@@ -21,6 +21,8 @@
 
 static PyObject* textures = NULL;
 
+dynamic_blocks_t dynblock;
+
 uint32_t max_blockid = 0;
 uint32_t max_data = 0;
 uint8_t* block_properties = NULL;
@@ -31,6 +33,16 @@ static PyObject* solid_blocks = NULL;
 static PyObject* fluid_blocks = NULL;
 static PyObject* nospawn_blocks = NULL;
 static PyObject* nodata_blocks = NULL;
+
+mc_block_t lookup_blockid(const char* name) {
+    PyObject* tmp = PyObject_CallMethod(textures, "lookup_blockid", "s", name);
+    if (!tmp)
+        return 0;
+    
+    mc_block_t blockid = PyLong_AsLong(tmp);
+    Py_DECREF(tmp);
+    return blockid;
+}
 
 PyObject* init_chunk_render(void) {
 
@@ -53,6 +65,9 @@ PyObject* init_chunk_render(void) {
         return NULL;
     max_blockid = PyLong_AsLong(tmp);
     Py_DECREF(tmp);
+
+    dynblock.nether_gold_ore = lookup_blockid("minecraft:nether_gold_ore");
+    dynblock.ancient_debris  = lookup_blockid("minecraft:ancient_debris");
 
     tmp = PyObject_GetAttrString(textures, "max_data");
     if (!tmp)

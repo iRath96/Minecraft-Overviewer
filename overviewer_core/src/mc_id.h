@@ -351,6 +351,16 @@ enum mc_block_id {
 
 typedef uint16_t mc_block_t;
 
+// dynamic blocks, looked up by block name
+// see iterate.c (init_chunk_render)
+typedef struct {
+    mc_block_t
+        nether_gold_ore,
+        ancient_debris
+    ;
+} dynamic_blocks_t;
+extern dynamic_blocks_t dynblock;
+
 enum mc_item_id {
     item_iron_shovel = 256,
     item_iron_pickaxe = 257,
