@@ -38,6 +38,7 @@ blockmap_generators = {}
 
 known_blocks = set()
 used_datas = set()
+max_blockid_original = 0
 max_blockid = 0
 max_data = 0
 
@@ -310,7 +311,7 @@ class Textures(object):
     def __getstate__(self):
         # we must get rid of the huge image lists, and other images
         attributes = self.__dict__.copy()
-        for attr in ['blockmap', 'biome_grass_texture', 'watertexture', 'lavatexture', 'firetexture', 'portaltexture', 'lightcolor', 'grasscolor', 'foliagecolor', 'watercolor', 'texture_cache']:
+        for attr in ['blockmap', 'biome_grass_texture', 'watertexture', 'lavatexture', 'firetexture', 'portaltexture', 'lightcolor', 'grasscolor', 'foliagecolor', 'watercolor', 'texture_cache', 'json_cache']:
             try:
                 del attributes[attr]
             except KeyError:
@@ -322,6 +323,7 @@ class Textures(object):
         for attr, val in list(attrs.items()):
             setattr(self, attr, val)
         self.texture_cache = {}
+        self.json_cache = {}
         if self.generated:
             self.generate()
     
@@ -358,7 +360,8 @@ class Textures(object):
             fullname = "minecraft:" + name
             if fullname not in blockmap.discovered_blocks:
                 blockmap.discovered_blocks[fullname] = {}
-            if data not in blockmap.discovered_blocks[fullname]:
+            #if data not in blockmap.discovered_blocks[fullname]:
+            if True:
                 blockid = max_blockid
                 max_blockid += 1
 
@@ -377,11 +380,11 @@ class Textures(object):
                 if file.startswith(blockstate_dir) and file[-5:] == ".json":
                     block_name = file[len(blockstate_dir):-5]
                     full_name = "minecraft:" + block_name
-                    if full_name in blockmap.blockmap and full_name not in replace_blocks:
+                    exists_already = (full_name in blockmap.blockmap and full_name not in blockmap.discovered_blocks)
+                    if exists_already and (full_name not in replace_blocks):
                         # already handled by manual Minecraft-Overviewer code
                         continue
                     
-                    #print(full_name)
                     blockstates = self.load_json(file)
                     if "multipart" in blockstates:
                         kv = {}
@@ -423,6 +426,9 @@ class Textures(object):
     ##
     
     def generate(self):
+        global max_blockid
+        max_blockid = max_blockid_original
+
         # Make sure we have the foliage/grasscolor images available
         try:
             self.load_foliage_color()
@@ -438,17 +444,13 @@ class Textures(object):
         # generate biome grass mask
         self.biome_grass_texture = self.build_block(self.load_image_texture("assets/minecraft/textures/block/grass_block_top.png"), self.load_image_texture("assets/minecraft/textures/block/grass_block_side_overlay.png"))
         
-        # check if textures have already been generated
-        if self.generated:
-            # do not re-render all the texture for no reason
-            self.blockmap = blockmap.textures
-            return
-        
         # find new blocks through block models
         self.newblocks = {}
         max_before = max_blockid
         self.index_blocks()
-        logging.info("Rendered %d blocks from block models", max_blockid - max_before)
+        
+        if not self.generated:
+            logging.info("Rendered %d blocks from block models", max_blockid - max_before)
 
         # max_blockid has changed due to new blocks, inform c_overviewer
         init_chunk_render()
@@ -1172,7 +1174,7 @@ def material(blockid=[], data=[0], **kwargs):
         
     def inner_material(func):
         global blockmap_generators
-        global max_data, max_blockid
+        global max_data, max_blockid_original
 
         # create a wrapper function with a known signature
         @functools.wraps(func)
@@ -1186,8 +1188,8 @@ def material(blockid=[], data=[0], **kwargs):
         for block in blockid:
             # set the property sets appropriately
             known_blocks.update([block])
-            if block >= max_blockid:
-                max_blockid = block + 1
+            if block >= max_blockid_original:
+                max_blockid_original = block + 1
             for prop in properties:
                 try:
                     if block in kwargs.get(prop, []):
