@@ -563,6 +563,11 @@ blockmap = {
     'minecraft:red_sandstone_wall': (21011, 0),
     'minecraft:sandstone_wall': (21012, 0),
     'minecraft:stone_brick_wall': (21013, 0),
+    # 1.16 blocks
+    'minecraft:warped_sign': (25000, 0),
+    'minecraft:warped_wall_sign': (25001, 0),
+    'minecraft:crimson_sign': (25002, 0),
+    'minecraft:crimson_wall_sign': (25003, 0),
 }
 
 colors = [  'white',  'orange', 'magenta', 'light_blue',
