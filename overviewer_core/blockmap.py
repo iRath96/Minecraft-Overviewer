@@ -584,4 +584,3 @@ for i in range(len(colors)):
     blockmap['minecraft:%s_concrete_powder'    % colors[i]] = (252, i)
 
 discovered_blocks = {}
-textures = None

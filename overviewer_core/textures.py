@@ -319,7 +319,7 @@ class Textures(object):
     rendering. It accepts a background color, north direction, and
     local textures path.
     """
-    def __init__(self, texturepath=None, bgcolor=(26, 26, 26, 0), northdirection=0):
+    def __init__(self, texturepath=None, cachepath=None, bgcolor=(26, 26, 26, 0), northdirection=0):
         self.bgcolor = bgcolor
         self.rotation = northdirection
         self.find_file_local_path = texturepath
@@ -331,6 +331,7 @@ class Textures(object):
         
         # this is set in in generate()
         self.generated = False
+        self.cachepath = cachepath
 
         # see load_image_texture()
         self.texture_cache = {}
@@ -469,6 +470,71 @@ class Textures(object):
                         for block_data in blockstates["variants"].keys():
                             register_block(block_name, block_data)
 
+    def load_texture_cache(self):
+        try:
+            with open(os.path.join(self.cachepath, "atlas.json"), "r") as file:
+                data = json.load(file)
+        except Exception:
+            return False
+        
+        indices = data["indices"]
+        max_blockid = data["max_blockid"]
+        blockmap.discovered_blocks = data["discovered"]
+        known_blocks = set(data["blocks"]["known"])
+        solid_blocks = set(data["blocks"]["solid"])
+        transparent_blocks = set(data["blocks"]["transparent"])
+
+        tile_w, tile_h = self.texture_dimensions
+        atlas = Image.open(os.path.join(self.cachepath, "atlas.png"))
+        atlas_w = 64
+
+        def crop(x, y):
+            x, y = x*tile_w, y*tile_h
+            return atlas.crop((x, y, x+tile_w, y+tile_h))
+
+        self.blockmap = [None] * max_blockid * max_data
+        for i,index in enumerate(indices):
+            x, y = i % atlas_w, i // atlas_w
+            block = crop(2*x+0, y)
+            mask = crop(2*x+1, y)
+            self.blockmap[index] = (block, mask)
+        
+        if not self.generated:
+            logging.info("Loaded textures from cache!")
+        return True
+
+    def store_texture_cache(self):
+        try:
+            os.makedirs(self.cachepath, exist_ok=True)
+        except Exception:
+            return False
+        
+        indices = [ i for i, x in enumerate(self.blockmap) if x ]
+        atlas_w = 64
+        atlas_h = (len(indices) + atlas_w - 1) // atlas_w
+
+        tile_w, tile_h = self.texture_dimensions
+        atlas = Image.new("RGBA", (2 * atlas_w * tile_w, atlas_h * tile_h))
+
+        for i,index in enumerate(indices):
+            (block, mask) = self.blockmap[index]
+            x, y = i % atlas_w, i // atlas_w
+            atlas.paste(block, ((2*x+0)*tile_w, y*tile_h))
+            atlas.paste(mask, ((2*x+1)*tile_w, y*tile_h))
+        
+        atlas.save(os.path.join(self.cachepath, "atlas.png"))
+        with open(os.path.join(self.cachepath, "atlas.json"), "w") as outfile:
+            json.dump({
+                "indices": indices,
+                "discovered": blockmap.discovered_blocks,
+                "max_blockid": max_blockid,
+                "blocks": {
+                    "known": list(known_blocks),
+                    "solid": list(solid_blocks),
+                    "transparent": list(transparent_blocks)
+                }
+            }, outfile)
+
     ##
     ## The big one: generate()
     ##
@@ -492,6 +558,10 @@ class Textures(object):
         # generate biome grass mask
         self.biome_grass_texture = self.build_block(self.load_image_texture("assets/minecraft/textures/block/grass_block_top.png"), self.load_image_texture("assets/minecraft/textures/block/grass_block_side_overlay.png"))
         
+        if self.load_texture_cache():
+            self.generated = True
+            return
+
         # find new blocks through block models
         self.newblocks = {}
         max_before = max_blockid
@@ -530,7 +600,9 @@ class Textures(object):
                 blockmap[i] = self.generate_texture_tuple(scaled_block)
         
         self.generated = True
-        blockmap.textures = self.blockmap
+
+        if self.cachepath:
+            self.store_texture_cache()
     
     ##
     ## Helpers for opening textures
