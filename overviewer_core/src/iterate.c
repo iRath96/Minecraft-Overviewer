@@ -35,11 +35,14 @@ static PyObject* nospawn_blocks = NULL;
 static PyObject* nodata_blocks = NULL;
 
 mc_block_t lookup_blockid(const char* name) {
-    PyObject* tmp = PyObject_CallMethod(textures, "lookup_blockid", "s", name);
+    mc_block_t blockid;
+    PyObject* tmp;
+    
+    tmp = PyObject_CallMethod(textures, "lookup_blockid", "s", name);
     if (!tmp)
         return 0;
     
-    mc_block_t blockid = PyLong_AsLong(tmp);
+    blockid = PyLong_AsLong(tmp);
     Py_DECREF(tmp);
     return blockid;
 }
