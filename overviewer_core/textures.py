@@ -471,6 +471,8 @@ class Textures(object):
                             register_block(block_name, block_data)
 
     def load_texture_cache(self):
+        global known_blocks, solid_blocks, transparent_blocks, max_blockid, max_data
+
         try:
             with open(os.path.join(self.cachepath, "atlas.json"), "r") as file:
                 data = json.load(file)
@@ -478,6 +480,7 @@ class Textures(object):
             return False
         
         indices = data["indices"]
+        max_data = data["max_data"]
         max_blockid = data["max_blockid"]
         blockmap.discovered_blocks = data["discovered"]
         known_blocks = set(data["blocks"]["known"])
@@ -527,6 +530,7 @@ class Textures(object):
             json.dump({
                 "indices": indices,
                 "discovered": blockmap.discovered_blocks,
+                "max_data": max_data,
                 "max_blockid": max_blockid,
                 "blocks": {
                     "known": list(known_blocks),
